@@ -28,7 +28,7 @@ login::login(QWidget *parent) :
     login_webView->page()->profile()->cookieStore()->deleteAllCookies(); //确保安全，进入系统前清空登录页面保留的所有Cookie
     login_webView->settings()->setAttribute(QWebEngineSettings::ShowScrollBars,false); //隐藏滑动条
 
-    connect(login_webView,SIGNAL(loadFinished(bool)) ,this,SLOT(login_loadfinish(bool))); //绑定网页加载完成事件
+    connect(login_webView,SIGNAL(loadFinished(bool)),this,SLOT(login_loadfinish(bool))); //绑定网页加载完成事件
     connect(login_webView->page()->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded,this,&login::slot_cookieAdded); //绑定Cookie添加事件
 
     login_webView->load(OA_login_url); //加载OA登录界面
