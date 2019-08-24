@@ -40,13 +40,13 @@ private slots:
     void requestFinished_KMP_download_get(QNetworkReply *reply);
 
     void KMP_fileserver_preview(const QUrl);
-    void KMP_fileserver_download(const QUrl url);
 
+    void ftp_research_Slot(QString strReadLine,QString byte_urlEncoded,int count);
+
+    void KMP_loadfinish(bool);
     void anchorClickedSlot(const QUrl);
     void slot_cookieAdded(const QNetworkCookie &cookie);
-    void updateDataReadProgress(qint64 bytesRead, qint64 totalBytes);
-
-    //void ftp_research_Slot(QString strReadLine,QString byte_urlEncoded,int count);
+    void updateDataReadProgress(qint64 bytesRead, qint64 totalBytes);    
 
     void on_pushButton_clicked(void);
 
@@ -59,18 +59,14 @@ private:
     bool http_stat(QNetworkReply* reply);
 
     void post(int post_id,QUrl url,QString content_type,QString rows,QString keyword);
-    void get(int get_id,QUrl url,QString content_type,QString keyword);
+    void get(int get_id,QUrl url,QString content_type);
 
-    //    void KMP_fileserver_download(const QUrl& url);
-    //    void encode_method(QString response);
-    //    void http_download(QString tag,QString title);
-    //    void ftp_research(QString keyword);
+    void ftp_research(QString keyword);
 
-    //    int flag_KMP_fileserver,flag_ftp,ui_flush_finish;
+    int flag_ui_flush;
 
     QFile *file;
-    QString KMP_Cookie;
-    QString QIP_rows,KMP_target;
+    QString QIP_rows,KMP_docxTitle,KMP_htmlNums,KMP_docxNums,KMP_Cookie;
     QWebEngineView *KMP_webView = new QWebEngineView();
     QStackedLayout *layout = new QStackedLayout();
 };

@@ -32,6 +32,8 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i=0;i<2;++i)
         ui->textBrowser_3->append("\n");
 
+    ui->frame->setStyleSheet("background-image: url(:/PNG/preview.png);");
+
     ui->textBrowser->setAlignment(Qt::AlignCenter);
     ui->textBrowser_2->setAlignment(Qt::AlignCenter);
     ui->textBrowser_3->setAlignment(Qt::AlignCenter);
@@ -128,12 +130,12 @@ void MainWindow::post(int post_id,QUrl url,QString content_type,QString rows,QSt
 }
 
 /*封装get接口*/
-void MainWindow::get(int get_id,QUrl url,QString content_type,QString keyword)
+void MainWindow::get(int get_id,QUrl url,QString content_type)
 {
     QNetworkRequest request; //请求
     QNetworkAccessManager *access = new QNetworkAccessManager(this); //接入
 
-    /*绑定请求完成事件(KMP_rows：0x01，KMP_get：0x02)*/
+    /*绑定请求完成事件(KMP_rows：0x01，KMP_get：0x02，KMP)*/
     QMetaObject::Connection GET_connect;
     if(get_id == 0x01)
         GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_result_get(QNetworkReply*)));
@@ -151,13 +153,10 @@ void MainWindow::get(int get_id,QUrl url,QString content_type,QString keyword)
     QList<QNetworkCookie> *listcookie=new QList<QNetworkCookie>();
 
     listcookie->push_back(QNetworkCookie("jsession_km",login_Cookie.section(' ',3,3).toUtf8()));
+    listcookie->push_back(QNetworkCookie("SESSION",KMP_Cookie.section(' ',3,3).toUtf8()));
     cookie.setValue(*listcookie);
 
-    if(get_id == 0x01)
-        request.setUrl(url.toString()+keyword);
-    else if(get_id == 0x02)
-        request.setUrl(url.toString());
-
+    request.setUrl(url.toString());
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute,true); //打开重定向
     request.setHeader(QNetworkRequest::ContentTypeHeader,content_type); //报文编码格式
     request.setHeader(QNetworkRequest::CookieHeader,cookie); //设置Cookie信息
@@ -262,10 +261,7 @@ void MainWindow::requestFinished_KMP_result_get(QNetworkReply* reply)
                 ui->textBrowser_2->append("");
 
                 if(count==0)
-                {
-                    //qDebug()<<tr("http://kmp.hikvision.com.cn%1").arg(href);
-                    anchorClickedSlot(QUrl("http://kmp.hikvision.com.cn/document/52057329?categoryId=51229452"));
-                }
+                    anchorClickedSlot(QUrl(tr("http://kmp.hikvision.com.cn%1").arg(href)));
 
                 ++count;
                 href = KMP_target = "";
@@ -280,8 +276,6 @@ void MainWindow::requestFinished_KMP_htmlNums_get(QNetworkReply *reply)
 {
     if(http_stat(reply))
     {
-        QString KMP_htmlNums;
-
         QString result = reply->readAll();
 
         result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //利用正则表达式修正字符集
@@ -291,21 +285,18 @@ void MainWindow::requestFinished_KMP_htmlNums_get(QNetworkReply *reply)
         for(int i=0;i<result_split.count();++i){
             //qDebug()<<result_split.at(i);
 
+            if(result_split.at(i).startsWith("a id=titleDoc"))
+                KMP_docxTitle = result_split.at(i).section(';',4,4).remove(QRegExp("\\s")); //文件名不带空格
+
             if(result_split.at(i).startsWith("a href=http://preview.hikvision.com.cn/fileserver/"))
-            {
                 KMP_htmlNums = result_split.at(i).section(' ',1,1).remove(0,5);
 
+            if(!KMP_docxTitle.isEmpty() && !KMP_htmlNums.isEmpty())
                 break;
-            }
         }
 
         if(!KMP_htmlNums.isEmpty())
-        {
-            qDebug()<<KMP_htmlNums;
-            get(0x03,KMP_htmlNums,"text/html","NULL");
-
             KMP_fileserver_preview(KMP_htmlNums);
-        }
     }
 }
 
@@ -315,12 +306,23 @@ void MainWindow::requestFinished_KMP_docxNums_get(QNetworkReply *reply)
     {
         QString result = reply->readAll();
 
-        //result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //利用正则表达式修正字符集
+        result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //利用正则表达式修正字符集
 
         QStringList result_split = result.split('<');
 
-        for(int i=0;i<result_split.count();++i)
-            qDebug()<<result_split.at(i);
+        for(int i=0;i<result_split.count();++i){
+            //qDebug()<<result_split.at(i);
+
+            if(result_split.at(i).startsWith("a class"))
+            {
+                KMP_docxNums = result_split.at(i).section(' ',5,5).remove(0,6);
+
+                break;
+            }
+        }
+
+        if(!KMP_docxNums.isEmpty())
+            get(0x04,QUrl(tr("http://preview.hikvision.com.cn/fileserver/%1").arg(KMP_docxNums)),"text/html");
     }
 }
 
@@ -328,23 +330,25 @@ void MainWindow::requestFinished_KMP_download_get(QNetworkReply *reply)
 {
     if(http_stat(reply))
     {
-        //        connect(reply,SIGNAL(downloadProgress(qint64,qint64)),this,SLOT(onDownloadProgress(qint64 ,qint64)));
+        connect(reply,SIGNAL(downloadProgress(qint64,qint64)),this,SLOT(updateDataReadProgress(qint64,qint64)));
 
-        //        file=new QFile(tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath().arg(KMP_target)));
-        //        file->open(QIODevice::WriteOnly);
+        qDebug()<<KMP_docxTitle;
 
-        //        file->write(reply->readAll());
-        qDebug()<<tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath().arg(KMP_target));
+        file=new QFile(tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath().arg(KMP_docxTitle)));
+        file->open(QIODevice::WriteOnly);
+
+        file->write(reply->readAll());
     }
 }
 
 void MainWindow::anchorClickedSlot(const QUrl url)
 {
-    get(0x02,url,"text/html","NULL");
+    get(0x02,url,"text/html");
 }
 
 void MainWindow::KMP_fileserver_preview(const QUrl url)
 {
+    connect(KMP_webView,SIGNAL(loadFinished(bool)),this,SLOT(KMP_loadfinish(bool))); //绑定网页加载完成事件
     connect(KMP_webView->page()->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded,this,&MainWindow::slot_cookieAdded); //绑定Cookie添加事件
 
     KMP_webView->load(url); //加载KMP预览界面
@@ -355,9 +359,41 @@ void MainWindow::KMP_fileserver_preview(const QUrl url)
     layout->addWidget(KMP_webView);
 }
 
-void MainWindow::KMP_fileserver_download(const QUrl url)
+void MainWindow::KMP_loadfinish(bool)
 {
-    get(0x04,url,"text/html","NULL");
+    get(0x03,KMP_htmlNums,"text/html");
+}
+
+void MainWindow::ftp_research(QString keyword)
+{
+    int count = 0;
+
+    while(!out.atEnd())
+    {
+        if(flag_ui_flush==0)
+        {
+            qDebug()<<"enter_here";
+
+            ++count;
+
+            QString strReadLine = out.readLine();
+            QByteArray byte_urlEncoded = strReadLine.toUtf8().toPercentEncoding();
+
+            if(strReadLine.contains(keyword))
+            {
+                flag_ui_flush = 1;
+                emit ftp_signal(strReadLine,byte_urlEncoded,count);
+            }
+        }
+    }
+}
+
+void MainWindow::ftp_research_Slot(QString strReadLine,QString byte_urlEncoded,int count)
+{
+    ui->textBrowser_3->append(tr("<a href=%1>%2</a>").arg(byte_urlEncoded).arg(strReadLine));
+    ui->progressBar_2->setValue(count);
+
+    flag_ui_flush = 0;
 }
 
 /*处理预览页面的Cookie信息*/
@@ -415,7 +451,17 @@ void MainWindow::on_pushButton_clicked()
         post(0x01,QUrl("http://pinfointernal.hikvision.com/app/searchData"),"application/x-www-form-urlencoded","10",ui->lineEdit->text());
 
     if(ui->checkBox_2->isChecked())
-        get(0x01,QUrl("http://kmp.hikvision.com.cn/search-title-modelType?search="),"text/html",ui->lineEdit->text());
+        get(0x01,QUrl(tr("http://kmp.hikvision.com.cn/search-title-modelType?search=%1").arg(ui->lineEdit->text())),"text/html");
+
+    if(ui->checkBox_3->isChecked())
+    {
+        connect(this,SIGNAL(ftp_signal(QString,QString,int)),this,SLOT(ftp_research_Slot(QString,QString,int)));
+
+        QFuture<void> fut = QtConcurrent::run(this,&MainWindow::ftp_research,ui->lineEdit->text());
+
+        while(!fut.isFinished())
+            QApplication::processEvents();
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
