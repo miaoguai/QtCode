@@ -1,4 +1,4 @@
-#include "login.h"
+ï»¿#include "login.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -8,20 +8,20 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    this->setAttribute(Qt::WA_DeleteOnClose,true); //¹Ø±Õ´°¿ÚÊ±Ïú»ÙÕ¼ÓÃ×ÊÔ´
+    this->setAttribute(Qt::WA_DeleteOnClose,true); //å…³é—­çª—å£æ—¶é”€æ¯å ç”¨èµ„æº
 
     setWindowTitle("FQA_DF");
-    setFixedSize(this->width(),this->height()); //½ûÖ¹ÍÏ¶¯´°¿Ú´óĞ¡
-    setWindowFlags(windowFlags()&~Qt::WindowMaximizeButtonHint); //½ûÖ¹×î´ó»¯°´Å¥
+    setFixedSize(this->width(),this->height()); //ç¦æ­¢æ‹–åŠ¨çª—å£å¤§å°
+    setWindowFlags(windowFlags()&~Qt::WindowMaximizeButtonHint); //ç¦æ­¢æœ€å¤§åŒ–æŒ‰é’®
 
     login *l = new login(this);
     connect(l,SIGNAL(login_close_signal()),this,SLOT(close()));
 
-    /*×èÈûÖ÷´°Ìå½ø³Ì£¬µÈ´ıµÇÂ¼È·ÈÏ*/
+    /*é˜»å¡ä¸»çª—ä½“è¿›ç¨‹ï¼Œç­‰å¾…ç™»å½•ç¡®è®¤*/
     if(l->exec() == QDialog::Accepted)
         qDebug()<<"login_accepted!";
 
-    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-logging"); //¹Ø±ÕChromeÄÚºËµÄ¿ØÖÆÌ¨ĞÅÏ¢
+    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-logging"); //å…³é—­Chromeå†…æ ¸çš„æ§åˆ¶å°ä¿¡æ¯
 
     for(int i=0;i<5;++i)
         ui->textBrowser->append("\n");
@@ -38,72 +38,79 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->textBrowser_2->setAlignment(Qt::AlignCenter);
     ui->textBrowser_3->setAlignment(Qt::AlignCenter);
 
-    ui->textBrowser->append("<font size='10' color='white'>²úÆ·ĞÅÏ¢Æ½Ì¨</font>");
-    ui->textBrowser_2->append("<font size='8' color='white'>ÖªÊ¶¹ÜÀíÆ½Ì¨</font>");
-    ui->textBrowser_3->append("<font size='10' color='white'>FTP</font>");
+    ui->textBrowser->append("<font size='10' color='white'>äº§å“ä¿¡æ¯å¹³å°</font>");
+    ui->textBrowser_2->append("<font size='8' color='white'>çŸ¥è¯†ç®¡ç†å¹³å°</font>");
+    ui->textBrowser_3->append("<font size='10' color='white'>FTP/Everything</font>");
 
-    connect(ui->textBrowser_2,SIGNAL(anchorClicked(const QUrl)),this,SLOT(anchorClickedSlot(const QUrl)));
+    connect(ui->textBrowser_2,SIGNAL(anchorClicked(const QUrl)),this,SLOT(KMP_anchorClickedSlot(const QUrl)));
+    connect(ui->textBrowser_3,SIGNAL(anchorClicked(const QUrl)),this,SLOT(ForE_anchorClickedSlot(const QUrl)));
 }
 
-/*Http×´Ì¬Âë¼ì²âº¯Êı*/
+/*HttpçŠ¶æ€ç æ£€æµ‹å‡½æ•°*/
 bool MainWindow::http_stat(QNetworkReply* reply)
 {
-    /*»ñÈ¡http×´Ì¬Âë*/
+    /*è·å–httpçŠ¶æ€ç */
     QVariant statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
     if(statusCode.isValid())
-        qDebug() << "status code=" << statusCode.toInt();
+        qDebug()<<"status code="<<statusCode.toInt();
 
     QVariant reason = reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString();
     if(reason.isValid())
-        qDebug() << "reason=" << reason.toString();
+        qDebug()<<"reason="<< reason.toString();
 
     QNetworkReply::NetworkError err = reply->error();
     if(err != QNetworkReply::NoError)
     {
-        qDebug() << "Failed: " << reply->errorString();
+        qDebug()<<"Failed:"<<reply->errorString();
+        qDebug()<<"\n";
+
         return false;
     }
     else
+    {
+        qDebug()<<"\n";
+
         return true;
+    }
 }
 
-/*Everything IPC´íÎóÂë*/
+/*Everything IPCé”™è¯¯ç */
 QString MainWindow::getSearchErrorString()
 {
     QString str;
     DWORD error = Everything_GetLastError();
 
     if(error == EVERYTHING_ERROR_MEMORY)
-        str = "Î´ÄÜÎªËÑË÷²éÑ¯·ÖÅäÄÚ´æ£¡";
+        str = "æœªèƒ½ä¸ºæœç´¢æŸ¥è¯¢åˆ†é…å†…å­˜ï¼";
 
     if(error == EVERYTHING_ERROR_IPC)
-        str = "IPC²»¿ÉÓÃ£¡";
+        str = "IPCä¸å¯ç”¨ï¼";
 
     if(error == EVERYTHING_ERROR_REGISTERCLASSEX)
-        str = "Î´ÄÜ×¢²áËÑË÷²éÑ¯´°¿ÚÀà£¡";
+        str = "æœªèƒ½æ³¨å†Œæœç´¢æŸ¥è¯¢çª—å£ç±»ï¼";
 
     if(error == EVERYTHING_ERROR_CREATEWINDOW)
-        str = "´´½¨ËÑË÷²éÑ¯´°¿ÚÊ§°Ü£¡";
+        str = "åˆ›å»ºæœç´¢æŸ¥è¯¢çª—å£å¤±è´¥ï¼";
 
     if(error == EVERYTHING_ERROR_CREATETHREAD)
-        str = "´´½¨ËÑË÷²éÑ¯Ïß³ÌÊ§°Ü£¡";
+        str = "åˆ›å»ºæœç´¢æŸ¥è¯¢çº¿ç¨‹å¤±è´¥ï¼";
 
     if(error == EVERYTHING_ERROR_INVALIDINDEX)
-        str = "ÎŞĞ§Ë÷Òı¡£Ë÷Òı±ØĞë´óÓÚ»òµÈÓÚ0£¬Ğ¡ÓÚ¿É¼û½á¹ûµÄÊıÄ¿£¡";
+        str = "æ— æ•ˆç´¢å¼•ã€‚ç´¢å¼•å¿…é¡»å¤§äºæˆ–ç­‰äº0ï¼Œå°äºå¯è§ç»“æœçš„æ•°ç›®ï¼";
 
     if(error == EVERYTHING_ERROR_INVALIDCALL)
-        str = "ÎŞĞ§µÄºô½Ğ£¡";
+        str = "æ— æ•ˆçš„å‘¼å«ï¼";
 
     return str;
 }
 
-/*·â×°post½Ó¿Ú*/
+/*å°è£…postæ¥å£*/
 void MainWindow::post(int post_id,QUrl url,QString content_type,QString rows,QString keyword)
 {
-    QNetworkRequest request; //ÇëÇó
-    QNetworkAccessManager *access = new QNetworkAccessManager(this); //½ÓÈë
+    QNetworkRequest request; //è¯·æ±‚
+    QNetworkAccessManager *access = new QNetworkAccessManager(this); //æ¥å…¥
 
-    /*°ó¶¨ÇëÇóÍê³ÉÊÂ¼ş(QIP_rows£º0x01£¬QIP_post£º0x02)*/
+    /*ç»‘å®šè¯·æ±‚å®Œæˆäº‹ä»¶(QIP_rowsï¼š0x01ï¼ŒQIP_postï¼š0x02)*/
     QMetaObject::Connection QIP_connect;
     if(post_id == 0x01)
         QIP_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_QIP_rows_post(QNetworkReply*)));
@@ -112,7 +119,7 @@ void MainWindow::post(int post_id,QUrl url,QString content_type,QString rows,QSt
 
     Q_ASSERT(QIP_connect);
 
-    /*cookie½âÎö*/
+    /*cookieè§£æ*/
     QVariant cookie;
     QList<QNetworkCookie> *listcookie=new QList<QNetworkCookie>();
 
@@ -120,22 +127,22 @@ void MainWindow::post(int post_id,QUrl url,QString content_type,QString rows,QSt
     cookie.setValue(*listcookie);
 
     request.setUrl(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader,content_type); //±¨ÎÄ±àÂë¸ñÊ½
-    request.setHeader(QNetworkRequest::CookieHeader,cookie); //ÉèÖÃCookieĞÅÏ¢
+    request.setHeader(QNetworkRequest::ContentTypeHeader,content_type); //æŠ¥æ–‡ç¼–ç æ ¼å¼
+    request.setHeader(QNetworkRequest::CookieHeader,cookie); //è®¾ç½®Cookieä¿¡æ¯
 
-    /*PostÇëÇó*/
+    /*Postè¯·æ±‚*/
     QByteArray frame;
     frame.append(tr("page=1&rows=%1&kw=%2&tp=1").arg(rows).arg(keyword));
     access->post(request,frame);
 }
 
-/*·â×°get½Ó¿Ú*/
+/*å°è£…getæ¥å£*/
 void MainWindow::get(int get_id,QUrl url,QString content_type)
 {
-    QNetworkRequest request; //ÇëÇó
-    QNetworkAccessManager *access = new QNetworkAccessManager(this); //½ÓÈë
+    QNetworkRequest request; //è¯·æ±‚
+    QNetworkAccessManager *access = new QNetworkAccessManager(this); //æ¥å…¥
 
-    /*°ó¶¨ÇëÇóÍê³ÉÊÂ¼ş(KMP_rows£º0x01£¬KMP_get£º0x02£¬KMP)*/
+    /*ç»‘å®šè¯·æ±‚å®Œæˆäº‹ä»¶(KMP_rowsï¼š0x01ï¼ŒKMP_getï¼š0x02ï¼ŒKMP)*/
     QMetaObject::Connection GET_connect;
     if(get_id == 0x01)
         GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_result_get(QNetworkReply*)));
@@ -148,7 +155,7 @@ void MainWindow::get(int get_id,QUrl url,QString content_type)
 
     Q_ASSERT(GET_connect);
 
-    /*cookie½âÎö*/
+    /*cookieè§£æ*/
     QVariant cookie;
     QList<QNetworkCookie> *listcookie=new QList<QNetworkCookie>();
 
@@ -157,11 +164,11 @@ void MainWindow::get(int get_id,QUrl url,QString content_type)
     cookie.setValue(*listcookie);
 
     request.setUrl(url.toString());
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute,true); //´ò¿ªÖØ¶¨Ïò
-    request.setHeader(QNetworkRequest::ContentTypeHeader,content_type); //±¨ÎÄ±àÂë¸ñÊ½
-    request.setHeader(QNetworkRequest::CookieHeader,cookie); //ÉèÖÃCookieĞÅÏ¢
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute,true); //æ‰“å¼€é‡å®šå‘
+    request.setHeader(QNetworkRequest::ContentTypeHeader,content_type); //æŠ¥æ–‡ç¼–ç æ ¼å¼
+    request.setHeader(QNetworkRequest::CookieHeader,cookie); //è®¾ç½®Cookieä¿¡æ¯
 
-    access->get(request);//GetÇëÇó
+    access->get(request);//Getè¯·æ±‚
 }
 
 void MainWindow::requestFinished_QIP_rows_post(QNetworkReply* reply)
@@ -170,7 +177,7 @@ void MainWindow::requestFinished_QIP_rows_post(QNetworkReply* reply)
     {
         QString result = reply->readLine();
 
-        result.remove(QRegExp("[\"{}\\]]")); //ÀûÓÃÕıÔò±í´ïÊ½ĞŞÕı×Ö·û¼¯
+        result.remove(QRegExp("[\"{}\\]]")); //åˆ©ç”¨æ­£åˆ™è¡¨è¾¾å¼ä¿®æ­£å­—ç¬¦é›†
 
         QStringList result_split = result.split(',');
 
@@ -192,14 +199,11 @@ void MainWindow::requestFinished_QIP_result_post(QNetworkReply* reply)
 {
     if(http_stat(reply))
     {
-        ui->textBrowser->clear();
-        ui->textBrowser->append("<font size='10' color='white'>²úÆ·ĞÅÏ¢Æ½Ì¨</font>");
-
         QString short_path,pub_title;
 
         QString result = reply->readAll();
 
-        result.remove(QRegExp("[\"{}\\]]")); //ÀûÓÃÕıÔò±í´ïÊ½ĞŞÕı×Ö·û¼¯
+        result.remove(QRegExp("[\"{}\\]]")); //åˆ©ç”¨æ­£åˆ™è¡¨è¾¾å¼ä¿®æ­£å­—ç¬¦é›†
 
         QStringList result_split = result.split(',');
 
@@ -209,7 +213,7 @@ void MainWindow::requestFinished_QIP_result_post(QNetworkReply* reply)
             result = result_split.at(i);
 
             if(result.startsWith("short_path"))
-                short_path = QUrl::toPercentEncoding(result.remove(0,26),"/"); //Â·¾¶URLEncode
+                short_path = QUrl::toPercentEncoding(result.remove(0,26),"/"); //è·¯å¾„URLEncode
 
             if(result.startsWith("pub_title"))
                 pub_title = result.remove(0,10);
@@ -232,16 +236,13 @@ void MainWindow::requestFinished_KMP_result_get(QNetworkReply* reply)
 {
     if(http_stat(reply))
     {
-        ui->textBrowser_2->clear();
-        ui->textBrowser_2->append("<font size='6' color='white'>ÖªÊ¶¹ÜÀíÆ½Ì¨</font>");
-
         int count = 0;
 
         QString href,KMP_target;
 
         QString result = reply->readAll();
 
-        result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //ÀûÓÃÕıÔò±í´ïÊ½ĞŞÕı×Ö·û¼¯
+        result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //åˆ©ç”¨æ­£åˆ™è¡¨è¾¾å¼ä¿®æ­£å­—ç¬¦é›†
 
         QStringList result_split = result.split('<');
 
@@ -251,7 +252,7 @@ void MainWindow::requestFinished_KMP_result_get(QNetworkReply* reply)
             if(result_split.at(i).startsWith("a href=/document/"))
             {
                 href = result_split.at(i).section(' ',1,1).remove(0,5);
-                KMP_target = result_split.at(i).section(' ',3,3).remove(0,13);
+                KMP_target = result_split.at(i).section(' ',3).remove(0,13);
             }
 
             if(!href.isEmpty() && !KMP_target.isEmpty())
@@ -261,14 +262,14 @@ void MainWindow::requestFinished_KMP_result_get(QNetworkReply* reply)
                 ui->textBrowser_2->append("");
 
                 if(count==0)
-                    anchorClickedSlot(QUrl(tr("http://kmp.hikvision.com.cn%1").arg(href)));
+                    KMP_anchorClickedSlot(QUrl(tr("http://kmp.hikvision.com.cn%1").arg(href)));
 
                 ++count;
                 href = KMP_target = "";
             }
         }
 
-        ui->textBrowser->moveCursor(QTextCursor::Start);
+        ui->textBrowser_2->moveCursor(QTextCursor::Start);
     }
 }
 
@@ -278,7 +279,7 @@ void MainWindow::requestFinished_KMP_htmlNums_get(QNetworkReply *reply)
     {
         QString result = reply->readAll();
 
-        result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //ÀûÓÃÕıÔò±í´ïÊ½ĞŞÕı×Ö·û¼¯
+        result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //åˆ©ç”¨æ­£åˆ™è¡¨è¾¾å¼ä¿®æ­£å­—ç¬¦é›†
 
         QStringList result_split = result.split('<');
 
@@ -286,17 +287,18 @@ void MainWindow::requestFinished_KMP_htmlNums_get(QNetworkReply *reply)
             //qDebug()<<result_split.at(i);
 
             if(result_split.at(i).startsWith("a id=titleDoc"))
-                KMP_docxTitle = result_split.at(i).section(';',4,4).remove(QRegExp("\\s")); //ÎÄ¼şÃû²»´ø¿Õ¸ñ
+                KMP_docxTitle = result_split.at(i).section(';',4,4).remove(QRegExp("[\\s>]")); //æ–‡ä»¶åä¸å¸¦ç©ºæ ¼ã€\ã€/ã€:ã€*ã€?ã€"ã€<ã€>ã€|
 
             if(result_split.at(i).startsWith("a href=http://preview.hikvision.com.cn/fileserver/"))
                 KMP_htmlNums = result_split.at(i).section(' ',1,1).remove(0,5);
 
             if(!KMP_docxTitle.isEmpty() && !KMP_htmlNums.isEmpty())
-                break;
-        }
+            {
+                KMP_fileserver_preview(KMP_htmlNums);
 
-        if(!KMP_htmlNums.isEmpty())
-            KMP_fileserver_preview(KMP_htmlNums);
+                break;
+            }
+        }
     }
 }
 
@@ -306,7 +308,7 @@ void MainWindow::requestFinished_KMP_docxNums_get(QNetworkReply *reply)
     {
         QString result = reply->readAll();
 
-        result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //ÀûÓÃÕıÔò±í´ïÊ½ĞŞÕı×Ö·û¼¯
+        result.remove(QRegExp("[\"\r\n]")).remove("</a>"); //åˆ©ç”¨æ­£åˆ™è¡¨è¾¾å¼ä¿®æ­£å­—ç¬¦é›†
 
         QStringList result_split = result.split('<');
 
@@ -317,12 +319,17 @@ void MainWindow::requestFinished_KMP_docxNums_get(QNetworkReply *reply)
             {
                 KMP_docxNums = result_split.at(i).section(' ',5,5).remove(0,6);
 
+                if(!KMP_docxNums.isEmpty())
+                {
+                    qDebug()<<"docxNums_get";
+                    get(0x04,QUrl(tr("http://preview.hikvision.com.cn/fileserver/%1").arg(KMP_docxNums)),"text/html");
+
+                    KMP_docxNums = "";
+                }
+
                 break;
             }
         }
-
-        if(!KMP_docxNums.isEmpty())
-            get(0x04,QUrl(tr("http://preview.hikvision.com.cn/fileserver/%1").arg(KMP_docxNums)),"text/html");
     }
 }
 
@@ -330,50 +337,72 @@ void MainWindow::requestFinished_KMP_download_get(QNetworkReply *reply)
 {
     if(http_stat(reply))
     {
-        connect(reply,SIGNAL(downloadProgress(qint64,qint64)),this,SLOT(updateDataReadProgress(qint64,qint64)));
-
-        qDebug()<<KMP_docxTitle;
-
-        file=new QFile(tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath().arg(KMP_docxTitle)));
+        file=new QFile(tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath()).arg(KMP_docxTitle));
         file->open(QIODevice::WriteOnly);
 
         file->write(reply->readAll());
+
+        file->close(); //ä¸‹è½½å®Œæˆåå…³é—­/é‡Šæ”¾æ–‡ä»¶
+        KMP_htmlNums = "";
     }
 }
 
-void MainWindow::anchorClickedSlot(const QUrl url)
+void MainWindow::KMP_anchorClickedSlot(const QUrl url)
 {
-    get(0x02,url,"text/html");
+    if(flag_KMP_preview_loadfinish==0)
+        get(0x02,url,"text/html");
+    else if(flag_KMP_preview_loadfinish==1)
+    {
+        QMessageBox msgBox;
+        msgBox.setText("<font size='5' color='black'>è¯·ç­‰å¾…åŠ è½½è¿›åº¦å®Œæˆï¼</font>");
+        msgBox.addButton(QMessageBox::Ok);
+        msgBox.button(QMessageBox::Ok)->hide();
+        msgBox.exec();
+    }
+}
+
+void MainWindow::ForE_anchorClickedSlot(const QUrl url)
+{
+    QProcess p(nullptr);
+
+    QTextCodec *codec = QTextCodec::codecForName("GBK");
+    p.startDetached("CMD", QStringList()<<"/c"<<codec->toUnicode(url.toString().toLocal8Bit())); //è„±ç¦»ä¸»çª—ä½“æ‰“å¼€word
 }
 
 void MainWindow::KMP_fileserver_preview(const QUrl url)
 {
-    connect(KMP_webView,SIGNAL(loadFinished(bool)),this,SLOT(KMP_loadfinish(bool))); //°ó¶¨ÍøÒ³¼ÓÔØÍê³ÉÊÂ¼ş
-    connect(KMP_webView->page()->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded,this,&MainWindow::slot_cookieAdded); //°ó¶¨CookieÌí¼ÓÊÂ¼ş
+    flag_KMP_preview_loadfinish = 1;
 
-    KMP_webView->load(url); //¼ÓÔØKMPÔ¤ÀÀ½çÃæ
-    KMP_webView->setZoomFactor(2); //·Å´óÒ³Ãæ
+    connect(KMP_webView,SIGNAL(loadProgress(int)),this,SLOT(updateDataReadProgress(int)));
+    connect(KMP_webView,SIGNAL(loadFinished(bool)),this,SLOT(KMP_preview_loadfinish(bool))); //ç»‘å®šç½‘é¡µåŠ è½½å®Œæˆäº‹ä»¶
+    connect(KMP_webView->page()->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded,this,&MainWindow::slot_cookieAdded); //ç»‘å®šCookieæ·»åŠ äº‹ä»¶
 
-    /*ÔÚframe¿Ø¼şÉÏÏÔÊ¾ÍøÒ³*/
+    KMP_webView->load(url); //åŠ è½½KMPé¢„è§ˆç•Œé¢
+    KMP_webView->setZoomFactor(2); //æ”¾å¤§é¡µé¢
+
+    /*åœ¨frameæ§ä»¶ä¸Šæ˜¾ç¤ºç½‘é¡µ*/
     ui->frame->setLayout(layout);
     layout->addWidget(KMP_webView);
 }
 
-void MainWindow::KMP_loadfinish(bool)
+void MainWindow::KMP_preview_loadfinish(bool)
 {
+    flag_KMP_preview_loadfinish = 0;
+
     get(0x03,KMP_htmlNums,"text/html");
+
+    KMP_htmlNums = "";
 }
 
 void MainWindow::ftp_research(QString keyword)
 {
     int count = 0;
+    flag_ftp_search_finish = 1;
 
     while(!out.atEnd())
     {
         if(flag_ui_flush==0)
         {
-            qDebug()<<"enter_here";
-
             ++count;
 
             QString strReadLine = out.readLine();
@@ -391,22 +420,23 @@ void MainWindow::ftp_research(QString keyword)
 void MainWindow::ftp_research_Slot(QString strReadLine,QString byte_urlEncoded,int count)
 {
     ui->textBrowser_3->append(tr("<a href=%1>%2</a>").arg(byte_urlEncoded).arg(strReadLine));
+    ui->textBrowser_3->append("");
+
     ui->progressBar_2->setValue(count);
 
     flag_ui_flush = 0;
 }
 
-/*´¦ÀíÔ¤ÀÀÒ³ÃæµÄCookieĞÅÏ¢*/
+/*å¤„ç†é¢„è§ˆé¡µé¢çš„Cookieä¿¡æ¯*/
 void MainWindow::slot_cookieAdded(const QNetworkCookie &cookie)
 {
     KMP_Cookie.append(cookie.name()).append(" ").append(cookie.value()).append(" ");
-    //qDebug()<<"Cookie Added-->"<<cookie.domain()<<cookie.name()<<cookie.value()<<endl; //´òÓ¡CookieÄÚµÄËùÊôÓòÃû¡¢ÊôĞÔÃû¡¢ÊôĞÔÖµ
+    //qDebug()<<"Cookie Added-->"<<cookie.domain()<<cookie.name()<<cookie.value()<<endl; //æ‰“å°Cookieå†…çš„æ‰€å±åŸŸåã€å±æ€§åã€å±æ€§å€¼
 }
 
-void MainWindow::updateDataReadProgress(qint64 bytesRead, qint64 totalBytes)
+void MainWindow::updateDataReadProgress(int progress)
 {
-    ui->progressBar->setMaximum(static_cast<int>(totalBytes));
-    ui->progressBar->setValue(static_cast<int>(bytesRead));
+    ui->progressBar->setValue(progress);
 }
 
 QList<QFileInfo> MainWindow::Search(QString str, bool reg)
@@ -448,19 +478,106 @@ QList<QFileInfo> MainWindow::Search(QString str, bool reg)
 void MainWindow::on_pushButton_clicked()
 {
     if(ui->checkBox->isChecked())
+    {
+        ui->textBrowser->clear();
+        ui->textBrowser->setAlignment(Qt::AlignLeft);
+        ui->textBrowser->append("<font size='10' color='white'>äº§å“ä¿¡æ¯å¹³å°</font>");
+
         post(0x01,QUrl("http://pinfointernal.hikvision.com/app/searchData"),"application/x-www-form-urlencoded","10",ui->lineEdit->text());
+    }
 
     if(ui->checkBox_2->isChecked())
+    {
+        ui->textBrowser_2->clear();
+        ui->textBrowser_2->setAlignment(Qt::AlignLeft);
+        ui->textBrowser_2->append("<font size='6' color='white'>çŸ¥è¯†ç®¡ç†å¹³å°</font>");
+
         get(0x01,QUrl(tr("http://kmp.hikvision.com.cn/search-title-modelType?search=%1").arg(ui->lineEdit->text())),"text/html");
+    }
 
     if(ui->checkBox_3->isChecked())
     {
-        connect(this,SIGNAL(ftp_signal(QString,QString,int)),this,SLOT(ftp_research_Slot(QString,QString,int)));
+        if(flag_ftp_search_finish==0)
+        {
+            ui->checkBox_3->setEnabled(false);
 
-        QFuture<void> fut = QtConcurrent::run(this,&MainWindow::ftp_research,ui->lineEdit->text());
+            ui->textBrowser_3->clear();
+            ui->textBrowser_3->setOpenLinks(true);
+            ui->textBrowser_3->setAlignment(Qt::AlignLeft);
+            ui->textBrowser_3->append("<font size='6' color='white'>FTP</font>");
 
-        while(!fut.isFinished())
-            QApplication::processEvents();
+            connect(this,SIGNAL(ftp_signal(QString,QString,int)),this,SLOT(ftp_research_Slot(QString,QString,int)));
+
+            QFuture<void> fut = QtConcurrent::run(this,&MainWindow::ftp_research,ui->lineEdit->text());
+
+            while(!fut.isFinished())
+                QApplication::processEvents();
+
+            out.seek(0);
+            flag_ftp_search_finish = 0;
+
+            ui->checkBox_3->setEnabled(true);
+
+            ui->progressBar_2->setValue(List_all_url);
+
+            ui->textBrowser_3->moveCursor(QTextCursor::Start);
+
+            qDebug()<<"ftp_search_done!";
+        }
+        else if(flag_ftp_search_finish==1 && !ui->checkBox->isChecked() && !ui->checkBox_2->isChecked())
+        {
+            QMessageBox msgBox;
+            msgBox.setText("<font size='5' color='black'>è¯·ç­‰å¾…ftpæœç´¢å®Œæˆï¼</font>");
+            msgBox.addButton(QMessageBox::Ok);
+            msgBox.button(QMessageBox::Ok)->hide();
+            msgBox.exec();
+        }
+    }
+
+    if(ui->checkBox_4->isChecked())
+    {
+        ui->checkBox_4->setEnabled(false);
+
+        ui->textBrowser_3->clear();
+        ui->textBrowser_3->setOpenLinks(false);
+        ui->textBrowser_3->setAlignment(Qt::AlignLeft);
+        ui->textBrowser_3->append("<font size='6' color='white'>Everything</font>");
+
+        QList<QFileInfo> result = Search(tr("%1/files file:docx content:%2").arg(QCoreApplication::applicationDirPath()).arg(ui->lineEdit->text()),false);
+
+        for(int i=0;i<result.count();++i)
+        {
+            ui->textBrowser_3->append(tr("<a href=%1>%1</a>").arg(result.at(i).filePath().replace(QRegExp("[()]"),"_")));
+            ui->textBrowser_3->append("");
+        }
+
+        ui->checkBox_4->setEnabled(true);
+
+        ui->textBrowser_3->moveCursor(QTextCursor::Start);
+    }
+}
+
+void MainWindow::on_checkBox_3_clicked()
+{
+    if(ui->checkBox_3->isChecked())
+        ui->checkBox_4->setEnabled(false);
+    else
+        ui->checkBox_4->setEnabled(true);
+}
+
+void MainWindow::on_checkBox_4_clicked()
+{
+    if(ui->checkBox_4->isChecked())
+    {
+        ui->checkBox->setEnabled(false);
+        ui->checkBox_2->setEnabled(false);
+        ui->checkBox_3->setEnabled(false);
+    }
+    else
+    {
+        ui->checkBox->setEnabled(true);
+        ui->checkBox_2->setEnabled(true);
+        ui->checkBox_3->setEnabled(true);
     }
 }
 

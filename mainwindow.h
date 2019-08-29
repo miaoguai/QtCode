@@ -1,4 +1,4 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QSslSocket>
@@ -43,12 +43,17 @@ private slots:
 
     void ftp_research_Slot(QString strReadLine,QString byte_urlEncoded,int count);
 
-    void KMP_loadfinish(bool);
-    void anchorClickedSlot(const QUrl);
+    void KMP_preview_loadfinish(bool);
+    void KMP_anchorClickedSlot(const QUrl);
+    void ForE_anchorClickedSlot(const QUrl);
     void slot_cookieAdded(const QNetworkCookie &cookie);
-    void updateDataReadProgress(qint64 bytesRead, qint64 totalBytes);    
+    void updateDataReadProgress(int progress);
 
     void on_pushButton_clicked(void);
+
+    void on_checkBox_3_clicked();
+
+    void on_checkBox_4_clicked();
 
 signals:
     void ftp_signal(QString strReadLine,QString byte_urlEncoded,int count);
@@ -63,10 +68,11 @@ private:
 
     void ftp_research(QString keyword);
 
-    int flag_ui_flush;
+    int flag_KMP_preview_loadfinish = 0,flag_ui_flush = 0,flag_ftp_search_finish = 0;
 
     QFile *file;
     QString QIP_rows,KMP_docxTitle,KMP_htmlNums,KMP_docxNums,KMP_Cookie;
+
     QWebEngineView *KMP_webView = new QWebEngineView();
     QStackedLayout *layout = new QStackedLayout();
 };
