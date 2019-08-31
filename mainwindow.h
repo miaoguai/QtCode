@@ -41,7 +41,7 @@ private slots:
 
     void KMP_fileserver_preview(const QUrl);
 
-    void ftp_research_Slot(QString strReadLine,QString byte_urlEncoded,int count);
+    void ftp_research_Slot(QString strReadLine,QByteArray byte_urlEncoded,int count);
 
     void KMP_preview_loadfinish(bool);
     void KMP_anchorClickedSlot(const QUrl);
@@ -56,7 +56,7 @@ private slots:
     void on_checkBox_4_clicked();
 
 signals:
-    void ftp_signal(QString strReadLine,QString byte_urlEncoded,int count);
+    void ftp_signal(QString strReadLine,QByteArray byte_urlEncoded,int count);
 
 private:
     Ui::MainWindow *ui;

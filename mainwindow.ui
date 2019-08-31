@@ -75,6 +75,9 @@ p, li { white-space: pre-wrap; }
     <property name="openExternalLinks">
      <bool>true</bool>
     </property>
+    <property name="openLinks">
+     <bool>true</bool>
+    </property>
    </widget>
    <widget class="QFrame" name="frame">
     <property name="geometry">

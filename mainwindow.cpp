@@ -321,7 +321,6 @@ void MainWindow::requestFinished_KMP_docxNums_get(QNetworkReply *reply)
 
                 if(!KMP_docxNums.isEmpty())
                 {
-                    qDebug()<<"docxNums_get";
                     get(0x04,QUrl(tr("http://preview.hikvision.com.cn/fileserver/%1").arg(KMP_docxNums)),"text/html");
 
                     KMP_docxNums = "";
@@ -337,7 +336,7 @@ void MainWindow::requestFinished_KMP_download_get(QNetworkReply *reply)
 {
     if(http_stat(reply))
     {
-        file=new QFile(tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath()).arg(KMP_docxTitle));
+        file=new QFile(tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath()).arg(KMP_docxTitle.replace(QRegExp("[()]"),"_")));
         file->open(QIODevice::WriteOnly);
 
         file->write(reply->readAll());
@@ -366,6 +365,7 @@ void MainWindow::ForE_anchorClickedSlot(const QUrl url)
     QProcess p(nullptr);
 
     QTextCodec *codec = QTextCodec::codecForName("GBK");
+
     p.startDetached("CMD", QStringList()<<"/c"<<codec->toUnicode(url.toString().toLocal8Bit())); //脱离主窗体打开word
 }
 
@@ -399,14 +399,18 @@ void MainWindow::ftp_research(QString keyword)
     int count = 0;
     flag_ftp_search_finish = 1;
 
+    QString strReadLine;
+    QByteArray byte_urlEncoded;
+    QTextCodec *codec = QTextCodec::codecForName("GBK");
+
     while(!out.atEnd())
     {
         if(flag_ui_flush==0)
         {
             ++count;
 
-            QString strReadLine = out.readLine();
-            QByteArray byte_urlEncoded = strReadLine.toUtf8().toPercentEncoding();
+            strReadLine = out.readLine();
+            byte_urlEncoded = codec->toUnicode(strReadLine.toLocal8Bit().toPercentEncoding("/:")).toStdString().c_str();
 
             if(strReadLine.contains(keyword))
             {
@@ -417,9 +421,9 @@ void MainWindow::ftp_research(QString keyword)
     }
 }
 
-void MainWindow::ftp_research_Slot(QString strReadLine,QString byte_urlEncoded,int count)
+void MainWindow::ftp_research_Slot(QString strReadLine,QByteArray byte_urlEncoded,int count)
 {
-    ui->textBrowser_3->append(tr("<a href=%1>%2</a>").arg(byte_urlEncoded).arg(strReadLine));
+    ui->textBrowser_3->append(tr("<a href=%1>%2</a>").arg(byte_urlEncoded.data()).arg(strReadLine));
     ui->textBrowser_3->append("");
 
     ui->progressBar_2->setValue(count);
@@ -506,7 +510,7 @@ void MainWindow::on_pushButton_clicked()
             ui->textBrowser_3->setAlignment(Qt::AlignLeft);
             ui->textBrowser_3->append("<font size='6' color='white'>FTP</font>");
 
-            connect(this,SIGNAL(ftp_signal(QString,QString,int)),this,SLOT(ftp_research_Slot(QString,QString,int)));
+            connect(this,SIGNAL(ftp_signal(QString,QByteArray,int)),this,SLOT(ftp_research_Slot(QString,QByteArray,int)));
 
             QFuture<void> fut = QtConcurrent::run(this,&MainWindow::ftp_research,ui->lineEdit->text());
 
@@ -521,6 +525,12 @@ void MainWindow::on_pushButton_clicked()
             ui->progressBar_2->setValue(List_all_url);
 
             ui->textBrowser_3->moveCursor(QTextCursor::Start);
+
+            QMessageBox msgBox;
+            msgBox.setText("<font size='5' color='black'>ftp搜索完成！</font>");
+            msgBox.addButton(QMessageBox::Ok);
+            msgBox.button(QMessageBox::Ok)->hide();
+            msgBox.exec();
 
             qDebug()<<"ftp_search_done!";
         }
@@ -543,17 +553,26 @@ void MainWindow::on_pushButton_clicked()
         ui->textBrowser_3->setAlignment(Qt::AlignLeft);
         ui->textBrowser_3->append("<font size='6' color='white'>Everything</font>");
 
-        QList<QFileInfo> result = Search(tr("%1/files file:docx content:%2").arg(QCoreApplication::applicationDirPath()).arg(ui->lineEdit->text()),false);
+        QList<QFileInfo> result = Search(tr("%1/files file:docx <content:%2>").arg(QCoreApplication::applicationDirPath()).arg(ui->lineEdit->text()),false);
 
         for(int i=0;i<result.count();++i)
         {
-            ui->textBrowser_3->append(tr("<a href=%1>%1</a>").arg(result.at(i).filePath().replace(QRegExp("[()]"),"_")));
+            ui->textBrowser_3->append(tr("<a href=%1>%1</a>").arg(result.at(i).filePath()));
             ui->textBrowser_3->append("");
         }
 
         ui->checkBox_4->setEnabled(true);
 
         ui->textBrowser_3->moveCursor(QTextCursor::Start);
+    }
+
+    if(!ui->checkBox->isChecked() && !ui->checkBox_2->isChecked() && !ui->checkBox_3->isChecked() && !ui->checkBox_4->isChecked())
+    {
+        QMessageBox msgBox;
+        msgBox.setText("<font size='5' color='black'>请勾选对应项后操作！</font>");
+        msgBox.addButton(QMessageBox::Ok);
+        msgBox.button(QMessageBox::Ok)->hide();
+        msgBox.exec();
     }
 }
 
