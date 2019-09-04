@@ -120,9 +120,9 @@ p, li { white-space: pre-wrap; }
    <widget class="QLineEdit" name="lineEdit">
     <property name="geometry">
      <rect>
-      <x>40</x>
+      <x>30</x>
       <y>60</y>
-      <width>331</width>
+      <width>341</width>
       <height>41</height>
      </rect>
     </property>
@@ -134,7 +134,7 @@ font: 15pt &quot;楷体&quot;;</string>
    <widget class="QCheckBox" name="checkBox">
     <property name="geometry">
      <rect>
-      <x>40</x>
+      <x>30</x>
       <y>130</y>
       <width>121</width>
       <height>20</height>
@@ -151,7 +151,7 @@ font: 12pt &quot;楷体&quot;;</string>
    <widget class="QCheckBox" name="checkBox_2">
     <property name="geometry">
      <rect>
-      <x>170</x>
+      <x>160</x>
       <y>130</y>
       <width>121</width>
       <height>20</height>
@@ -168,7 +168,7 @@ font: 12pt &quot;楷体&quot;;</string>
    <widget class="QCheckBox" name="checkBox_3">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>290</x>
       <y>130</y>
       <width>51</width>
       <height>18</height>

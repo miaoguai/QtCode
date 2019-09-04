@@ -47,7 +47,7 @@ private slots:
     void KMP_anchorClickedSlot(const QUrl);
     void ForE_anchorClickedSlot(const QUrl);
     void slot_cookieAdded(const QNetworkCookie &cookie);
-    void updateDataReadProgress(int progress);
+    void updateDataReadProgress(qint64 bytesSent, qint64 bytesTotal);
 
     void on_pushButton_clicked(void);
 
@@ -63,18 +63,18 @@ private:
 
     bool http_stat(QNetworkReply* reply);
 
-    void post(int post_id,QUrl url,QString content_type,QString rows,QString keyword);
     void get(int get_id,QUrl url,QString content_type);
+    void post(int post_id,QUrl url,QString content_type,QString rows,QString keyword);    
 
     void ftp_research(QString keyword);
 
-    int flag_KMP_preview_loadfinish = 0,flag_ui_flush = 0,flag_ftp_search_finish = 0;
+    int flag_KMP_preview_webloadfinish = 0,flag_KMP_preview_downloadfinish = 0,flag_ui_flush = 0,flag_ftp_search_finish = 0;
 
     QFile *file;
     QString QIP_rows,KMP_docxTitle,KMP_htmlNums,KMP_docxNums,KMP_Cookie;
 
-    QWebEngineView *KMP_webView = new QWebEngineView();
     QStackedLayout *layout = new QStackedLayout();
+    QWebEngineView *KMP_webView = new QWebEngineView();
 };
 
 #endif // MAINWINDOW_H

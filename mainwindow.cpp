@@ -14,14 +14,14 @@ MainWindow::MainWindow(QWidget *parent) :
     setFixedSize(this->width(),this->height()); //禁止拖动窗口大小
     setWindowFlags(windowFlags()&~Qt::WindowMaximizeButtonHint); //禁止最大化按钮
 
+    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-logging"); //关闭Chrome内核的控制台信息
+
     login *l = new login(this);
     connect(l,SIGNAL(login_close_signal()),this,SLOT(close()));
 
     /*阻塞主窗体进程，等待登录确认*/
     if(l->exec() == QDialog::Accepted)
-        qDebug()<<"login_accepted!";
-
-    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-logging"); //关闭Chrome内核的控制台信息
+        qDebug()<<"login_accepted!"<<"\n";
 
     for(int i=0;i<5;++i)
         ui->textBrowser->append("\n");
@@ -47,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent) :
 }
 
 /*Http状态码检测函数*/
-bool MainWindow::http_stat(QNetworkReply* reply)
+bool MainWindow::http_stat(QNetworkReply *reply)
 {
     /*获取http状态码*/
     QVariant statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
@@ -59,7 +59,7 @@ bool MainWindow::http_stat(QNetworkReply* reply)
         qDebug()<<"reason="<< reason.toString();
 
     QNetworkReply::NetworkError err = reply->error();
-    if(err != QNetworkReply::NoError)
+    if(err!=QNetworkReply::NoError)
     {
         qDebug()<<"Failed:"<<reply->errorString();
         qDebug()<<"\n";
@@ -104,17 +104,56 @@ QString MainWindow::getSearchErrorString()
     return str;
 }
 
+/*封装get接口*/
+void MainWindow::get(int get_id,QUrl url,QString content_type)
+{
+    QNetworkRequest request; //请求
+    QNetworkAccessManager *access = new QNetworkAccessManager(); //接入
+
+    /*绑定请求完成事件(KMP_result：0x01，KMP_htmlNums：0x02，KMP_docxNums：0x03，KMP_download：0x04)*/
+    QMetaObject::Connection GET_connect;
+    if(get_id==0x01)
+        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_result_get(QNetworkReply*)));
+    else if(get_id==0x02)
+        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_htmlNums_get(QNetworkReply*)));
+    else if(get_id==0x03)
+        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_docxNums_get(QNetworkReply*)));
+    else if(get_id==0x04)
+        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_download_get(QNetworkReply*)));
+
+    Q_ASSERT(GET_connect);
+
+    /*cookie解析*/
+    QVariant cookie;
+    QList<QNetworkCookie> *listcookie=new QList<QNetworkCookie>();
+
+    /*装载知识管理平台及其文件服务器的Cookie信息*/
+    listcookie->push_back(QNetworkCookie("jsession_km",login_Cookie.section(' ',3,3).toUtf8()));
+    listcookie->push_back(QNetworkCookie("SESSION",KMP_Cookie.section(' ',3,3).toUtf8()));
+    cookie.setValue(*listcookie);
+
+    request.setUrl(url);
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute,true); //打开重定向
+    request.setHeader(QNetworkRequest::ContentTypeHeader,content_type); //报文编码格式
+    request.setHeader(QNetworkRequest::CookieHeader,cookie); //设置Cookie信息
+
+    if(get_id==0x01 || get_id==0x02 || get_id==0x03)
+        access->get(request); //Get请求
+    else if(get_id==0x04)
+        connect(access->get(request),SIGNAL(downloadProgress(qint64,qint64)),this,SLOT(updateDataReadProgress(qint64,qint64))); //绑定网页加载进度事件，带进度反馈的Get请求
+}
+
 /*封装post接口*/
 void MainWindow::post(int post_id,QUrl url,QString content_type,QString rows,QString keyword)
 {
     QNetworkRequest request; //请求
-    QNetworkAccessManager *access = new QNetworkAccessManager(this); //接入
+    QNetworkAccessManager *access = new QNetworkAccessManager(); //接入
 
     /*绑定请求完成事件(QIP_rows：0x01，QIP_post：0x02)*/
     QMetaObject::Connection QIP_connect;
-    if(post_id == 0x01)
+    if(post_id==0x01)
         QIP_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_QIP_rows_post(QNetworkReply*)));
-    else if(post_id == 0x02)
+    else if(post_id==0x02)
         QIP_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_QIP_result_post(QNetworkReply*)));
 
     Q_ASSERT(QIP_connect);
@@ -123,6 +162,7 @@ void MainWindow::post(int post_id,QUrl url,QString content_type,QString rows,QSt
     QVariant cookie;
     QList<QNetworkCookie> *listcookie=new QList<QNetworkCookie>();
 
+    /*装载单点登录的Cookie信息*/
     listcookie->push_back(QNetworkCookie("jsession_km",login_Cookie.section(' ',5,5).toUtf8()));
     cookie.setValue(*listcookie);
 
@@ -136,43 +176,10 @@ void MainWindow::post(int post_id,QUrl url,QString content_type,QString rows,QSt
     access->post(request,frame);
 }
 
-/*封装get接口*/
-void MainWindow::get(int get_id,QUrl url,QString content_type)
-{
-    QNetworkRequest request; //请求
-    QNetworkAccessManager *access = new QNetworkAccessManager(this); //接入
-
-    /*绑定请求完成事件(KMP_rows：0x01，KMP_get：0x02，KMP)*/
-    QMetaObject::Connection GET_connect;
-    if(get_id == 0x01)
-        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_result_get(QNetworkReply*)));
-    else if(get_id == 0x02)
-        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_htmlNums_get(QNetworkReply*)));
-    else if(get_id == 0x03)
-        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_docxNums_get(QNetworkReply*)));
-    else if(get_id == 0x04)
-        GET_connect = QObject::connect(access, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished_KMP_download_get(QNetworkReply*)));
-
-    Q_ASSERT(GET_connect);
-
-    /*cookie解析*/
-    QVariant cookie;
-    QList<QNetworkCookie> *listcookie=new QList<QNetworkCookie>();
-
-    listcookie->push_back(QNetworkCookie("jsession_km",login_Cookie.section(' ',3,3).toUtf8()));
-    listcookie->push_back(QNetworkCookie("SESSION",KMP_Cookie.section(' ',3,3).toUtf8()));
-    cookie.setValue(*listcookie);
-
-    request.setUrl(url.toString());
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute,true); //打开重定向
-    request.setHeader(QNetworkRequest::ContentTypeHeader,content_type); //报文编码格式
-    request.setHeader(QNetworkRequest::CookieHeader,cookie); //设置Cookie信息
-
-    access->get(request);//Get请求
-}
-
+/*获取产品信息平台的列项信息*/
 void MainWindow::requestFinished_QIP_rows_post(QNetworkReply* reply)
 {
+    qDebug()<<"产品信息平台列表信息请求(Post)：";
     if(http_stat(reply))
     {
         QString result = reply->readLine();
@@ -193,10 +200,14 @@ void MainWindow::requestFinished_QIP_rows_post(QNetworkReply* reply)
 
         post(0x02,QUrl("http://pinfointernal.hikvision.com/app/searchData"),"application/x-www-form-urlencoded",QIP_rows,ui->lineEdit->text());
     }
+
+    reply->deleteLater();
 }
 
+/*获取产品信息平台的检索结果*/
 void MainWindow::requestFinished_QIP_result_post(QNetworkReply* reply)
 {
+    qDebug()<<"产品信息平台检索请求(Post)：";
     if(http_stat(reply))
     {
         QString short_path,pub_title;
@@ -228,12 +239,19 @@ void MainWindow::requestFinished_QIP_result_post(QNetworkReply* reply)
             }
         }
 
+        if(!ui->textBrowser->toPlainText().contains('>'))
+            ui->textBrowser->append("<font size='6' color='red'>无匹配结果！</font>");
+
         ui->textBrowser->moveCursor(QTextCursor::Start);
     }
+
+    reply->deleteLater();
 }
 
+/*获取知识管理平台的检索结果*/
 void MainWindow::requestFinished_KMP_result_get(QNetworkReply* reply)
 {
+    qDebug()<<"知识管理平台检索请求(Get)：";
     if(http_stat(reply))
     {
         int count = 0;
@@ -252,12 +270,12 @@ void MainWindow::requestFinished_KMP_result_get(QNetworkReply* reply)
             if(result_split.at(i).startsWith("a href=/document/"))
             {
                 href = result_split.at(i).section(' ',1,1).remove(0,5);
-                KMP_target = result_split.at(i).section(' ',3).remove(0,13);
+                KMP_target = ">"+result_split.at(i).section('>',1);
             }
 
             if(!href.isEmpty() && !KMP_target.isEmpty())
             {
-                //qDebug()<<tr("<a href = http://kmp.hikvision.com.cn%1>>%2</a>").arg(href).arg(target);
+                //qDebug()<<tr("<a href = http://kmp.hikvision.com.cn%1>>%2</a>").arg(href).arg(KMP_target);
                 ui->textBrowser_2->append(tr("<a href = http://kmp.hikvision.com.cn%1>%2</a>").arg(href).arg(KMP_target));
                 ui->textBrowser_2->append("");
 
@@ -271,10 +289,14 @@ void MainWindow::requestFinished_KMP_result_get(QNetworkReply* reply)
 
         ui->textBrowser_2->moveCursor(QTextCursor::Start);
     }
+
+    reply->deleteLater();
 }
 
+/*获取知识管理平台文件项的html编码号*/
 void MainWindow::requestFinished_KMP_htmlNums_get(QNetworkReply *reply)
 {
+    qDebug()<<"知识管理平台html编码号请求(Get)：";
     if(http_stat(reply))
     {
         QString result = reply->readAll();
@@ -294,16 +316,31 @@ void MainWindow::requestFinished_KMP_htmlNums_get(QNetworkReply *reply)
 
             if(!KMP_docxTitle.isEmpty() && !KMP_htmlNums.isEmpty())
             {
+                KMP_webView->deleteLater(); //注销前次预览页面，避免重复打开
+
                 KMP_fileserver_preview(KMP_htmlNums);
 
                 break;
             }
         }
+
+        if(KMP_docxTitle.isEmpty() || KMP_htmlNums.isEmpty())
+        {
+            QMessageBox msgBox;
+            msgBox.setText("<font size='5' color='black'>非常规文档！</font>");
+            msgBox.addButton(QMessageBox::Ok);
+            msgBox.button(QMessageBox::Ok)->hide();
+            msgBox.exec();
+        }
     }
+
+    reply->deleteLater();
 }
 
+/*获取知识管理平台文件项的docx编码号*/
 void MainWindow::requestFinished_KMP_docxNums_get(QNetworkReply *reply)
 {
+    qDebug()<<"知识管理平台docx编码号请求(Get)：";
     if(http_stat(reply))
     {
         QString result = reply->readAll();
@@ -330,10 +367,14 @@ void MainWindow::requestFinished_KMP_docxNums_get(QNetworkReply *reply)
             }
         }
     }
+
+    reply->deleteLater();
 }
 
+/*获取知识管理平台的文件项，并保存在本地files文件夹下*/
 void MainWindow::requestFinished_KMP_download_get(QNetworkReply *reply)
 {
+    qDebug()<<"知识管理平台文件下载请求(Get)：";
     if(http_stat(reply))
     {
         file=new QFile(tr("%1/files/%2.docx").arg(QCoreApplication::applicationDirPath()).arg(KMP_docxTitle.replace(QRegExp("[()]"),"_")));
@@ -342,15 +383,22 @@ void MainWindow::requestFinished_KMP_download_get(QNetworkReply *reply)
         file->write(reply->readAll());
 
         file->close(); //下载完成后关闭/释放文件
-        KMP_htmlNums = "";
+        KMP_docxTitle = "";
     }
+
+    reply->deleteLater();
 }
 
+/*重写KMP结果输出控件(Qtextbrowser)的点击链接事件*/
 void MainWindow::KMP_anchorClickedSlot(const QUrl url)
 {
-    if(flag_KMP_preview_loadfinish==0)
+    if(flag_KMP_preview_webloadfinish==0 && flag_KMP_preview_downloadfinish==0)
+    {
+        ui->progressBar->setValue(0);
+
         get(0x02,url,"text/html");
-    else if(flag_KMP_preview_loadfinish==1)
+    }
+    else if(flag_KMP_preview_webloadfinish==1 || flag_KMP_preview_downloadfinish==1)
     {
         QMessageBox msgBox;
         msgBox.setText("<font size='5' color='black'>请等待加载进度完成！</font>");
@@ -360,6 +408,7 @@ void MainWindow::KMP_anchorClickedSlot(const QUrl url)
     }
 }
 
+/*重写FTP/Everything结果输出控件(Qtextbrowser)的点击链接事件*/
 void MainWindow::ForE_anchorClickedSlot(const QUrl url)
 {
     QProcess p(nullptr);
@@ -369,11 +418,13 @@ void MainWindow::ForE_anchorClickedSlot(const QUrl url)
     p.startDetached("CMD", QStringList()<<"/c"<<codec->toUnicode(url.toString().toLocal8Bit())); //脱离主窗体打开word
 }
 
+/*预览知识管理平台的文件项*/
 void MainWindow::KMP_fileserver_preview(const QUrl url)
-{
-    flag_KMP_preview_loadfinish = 1;
+{    
+    flag_KMP_preview_webloadfinish = 1;
 
-    connect(KMP_webView,SIGNAL(loadProgress(int)),this,SLOT(updateDataReadProgress(int)));
+    KMP_webView = new QWebEngineView();
+
     connect(KMP_webView,SIGNAL(loadFinished(bool)),this,SLOT(KMP_preview_loadfinish(bool))); //绑定网页加载完成事件
     connect(KMP_webView->page()->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded,this,&MainWindow::slot_cookieAdded); //绑定Cookie添加事件
 
@@ -385,15 +436,17 @@ void MainWindow::KMP_fileserver_preview(const QUrl url)
     layout->addWidget(KMP_webView);
 }
 
+/*预览页面加载完成事件*/
 void MainWindow::KMP_preview_loadfinish(bool)
-{
-    flag_KMP_preview_loadfinish = 0;
-
+{   
     get(0x03,KMP_htmlNums,"text/html");
+
+    flag_KMP_preview_webloadfinish = 0;
 
     KMP_htmlNums = "";
 }
 
+/*FTP检索，对txt文件下的路径信息进行多关键词检索*/
 void MainWindow::ftp_research(QString keyword)
 {
     int count = 0;
@@ -421,6 +474,7 @@ void MainWindow::ftp_research(QString keyword)
     }
 }
 
+/*在主窗体刷新显示控件(Qtextbrowser)，列出FTP检索结果，并更新进度条*/
 void MainWindow::ftp_research_Slot(QString strReadLine,QByteArray byte_urlEncoded,int count)
 {
     ui->textBrowser_3->append(tr("<a href=%1>%2</a>").arg(byte_urlEncoded.data()).arg(strReadLine));
@@ -438,11 +492,19 @@ void MainWindow::slot_cookieAdded(const QNetworkCookie &cookie)
     //qDebug()<<"Cookie Added-->"<<cookie.domain()<<cookie.name()<<cookie.value()<<endl; //打印Cookie内的所属域名、属性名、属性值
 }
 
-void MainWindow::updateDataReadProgress(int progress)
+/*KMP预览页面加载进度*/
+void MainWindow::updateDataReadProgress(qint64 bytesSent, qint64 bytesTotal)
 {
-    ui->progressBar->setValue(progress);
+    if(bytesSent == bytesTotal)
+        flag_KMP_preview_downloadfinish = 0;
+    else
+        flag_KMP_preview_downloadfinish = 1;
+
+    ui->progressBar->setMaximum(static_cast<int>(bytesTotal));
+    ui->progressBar->setValue(static_cast<int>(bytesSent));
 }
 
+/*Everything文件检索*/
 QList<QFileInfo> MainWindow::Search(QString str, bool reg)
 {
     QMutex mutex;
@@ -479,6 +541,7 @@ QList<QFileInfo> MainWindow::Search(QString str, bool reg)
     return files;
 }
 
+/*主窗体的'Search'按钮处理函数*/
 void MainWindow::on_pushButton_clicked()
 {
     if(ui->checkBox->isChecked())
@@ -492,11 +555,22 @@ void MainWindow::on_pushButton_clicked()
 
     if(ui->checkBox_2->isChecked())
     {
-        ui->textBrowser_2->clear();
-        ui->textBrowser_2->setAlignment(Qt::AlignLeft);
-        ui->textBrowser_2->append("<font size='6' color='white'>知识管理平台</font>");
+        if(flag_KMP_preview_webloadfinish==0 && flag_KMP_preview_downloadfinish==0)
+        {
+            ui->textBrowser_2->clear();
+            ui->textBrowser_2->setAlignment(Qt::AlignLeft);
+            ui->textBrowser_2->append("<font size='6' color='white'>知识管理平台</font>");
 
-        get(0x01,QUrl(tr("http://kmp.hikvision.com.cn/search-title-modelType?search=%1").arg(ui->lineEdit->text())),"text/html");
+            get(0x01,QUrl(tr("http://kmp.hikvision.com.cn/search-title-modelType?search=%1").arg(ui->lineEdit->text())),"text/html");
+        }
+        else if(flag_KMP_preview_webloadfinish==1 || flag_KMP_preview_downloadfinish==1)
+        {
+            QMessageBox msgBox;
+            msgBox.setText("<font size='5' color='black'>请等待加载进度完成！</font>");
+            msgBox.addButton(QMessageBox::Ok);
+            msgBox.button(QMessageBox::Ok)->hide();
+            msgBox.exec();
+        }
     }
 
     if(ui->checkBox_3->isChecked())
@@ -510,10 +584,11 @@ void MainWindow::on_pushButton_clicked()
             ui->textBrowser_3->setAlignment(Qt::AlignLeft);
             ui->textBrowser_3->append("<font size='6' color='white'>FTP</font>");
 
-            connect(this,SIGNAL(ftp_signal(QString,QByteArray,int)),this,SLOT(ftp_research_Slot(QString,QByteArray,int)));
+            connect(this,SIGNAL(ftp_signal(QString,QByteArray,int)),this,SLOT(ftp_research_Slot(QString,QByteArray,int))); //绑定Qtextbrowse刷新事件
 
-            QFuture<void> fut = QtConcurrent::run(this,&MainWindow::ftp_research,ui->lineEdit->text());
+            QFuture<void> fut = QtConcurrent::run(this,&MainWindow::ftp_research,ui->lineEdit->text()); //新建并行的FTP搜索线程
 
+            /*避免主窗体假死*/
             while(!fut.isFinished())
                 QApplication::processEvents();
 
@@ -588,6 +663,10 @@ void MainWindow::on_checkBox_4_clicked()
 {
     if(ui->checkBox_4->isChecked())
     {
+        ui->checkBox->setChecked(false);
+        ui->checkBox_2->setChecked(false);
+        ui->checkBox_3->setChecked(false);
+
         ui->checkBox->setEnabled(false);
         ui->checkBox_2->setEnabled(false);
         ui->checkBox_3->setEnabled(false);

@@ -1,4 +1,4 @@
-#include "login.h"
+ï»¿#include "login.h"
 #include "ui_login.h"
 
 QTextStream out;
@@ -11,39 +11,39 @@ login::login(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    setWindowTitle("µÇÂ¼");
-    setFixedSize(this->width(),this->height()); //½ûÖ¹ÍÏ¶¯´°¿Ú´óĞ¡
-    setWindowFlags(windowFlags()&~Qt::WindowMaximizeButtonHint); //½ûÖ¹×î´ó»¯°´Å¥
+    setWindowTitle("ç™»å½•");
+    setFixedSize(this->width(),this->height()); //ç¦æ­¢æ‹–åŠ¨çª—å£å¤§å°
+    setWindowFlags(windowFlags()&~Qt::WindowMaximizeButtonHint); //ç¦æ­¢æœ€å¤§åŒ–æŒ‰é’®
 
-    /*UI³õÊ¼»¯ÏîÄ¿*/
+    /*UIåˆå§‹åŒ–é¡¹ç›®*/
     ui->frame->hide();
     ui->progressBar->hide();
 
-    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-logging"); //¹Ø±ÕChromeÄÚºËµÄ¿ØÖÆÌ¨ĞÅÏ¢
+    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-logging"); //å…³é—­Chromeå†…æ ¸çš„æ§åˆ¶å°ä¿¡æ¯
 
-    /*½øĞĞSSOµ¥µãµÇÂ¼£¬²¢»ñÈ¡Cookie*/
+    /*è¿›è¡ŒSSOå•ç‚¹ç™»å½•ï¼Œå¹¶è·å–Cookie*/
     login_webView = new QWebEngineView(this);
-    QString OA_login_url = "http://kmp.hikvision.com.cn"; //Í¨¹ıµÇÈëÖªÊ¶¹ÜÀíÆ½Ì¨£¬Í¬Ê±»ñÈ¡JsessionIDºÍJsessionKM£¨Ê¹ÓÃhttpÃ÷ÎÄ´«Êä£¬ChromeÄÚºË±¨²»°²È«¾¯¸æ£©
+    QString OA_login_url = "http://kmp.hikvision.com.cn"; //é€šè¿‡ç™»å…¥çŸ¥è¯†ç®¡ç†å¹³å°ï¼ŒåŒæ—¶è·å–JsessionIDå’ŒJsessionKMï¼ˆä½¿ç”¨httpæ˜æ–‡ä¼ è¾“ï¼ŒChromeå†…æ ¸æŠ¥ä¸å®‰å…¨è­¦å‘Šï¼‰
 
-    login_webView->page()->profile()->cookieStore()->deleteAllCookies(); //È·±£°²È«£¬½øÈëÏµÍ³Ç°Çå¿ÕµÇÂ¼Ò³Ãæ±£ÁôµÄËùÓĞCookie
-    login_webView->settings()->setAttribute(QWebEngineSettings::ShowScrollBars,false); //Òş²Ø»¬¶¯Ìõ
+    login_webView->settings()->setAttribute(QWebEngineSettings::ShowScrollBars,false); //éšè—æ»‘åŠ¨æ¡
+    login_webView->page()->profile()->cookieStore()->deleteAllCookies(); //ç¡®ä¿å®‰å…¨ï¼Œè¿›å…¥ç³»ç»Ÿå‰æ¸…ç©ºç™»å½•é¡µé¢ä¿ç•™çš„æ‰€æœ‰Cookie
 
-    connect(login_webView,SIGNAL(loadFinished(bool)),this,SLOT(login_loadfinish(bool))); //°ó¶¨ÍøÒ³¼ÓÔØÍê³ÉÊÂ¼ş
-    connect(login_webView->page()->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded,this,&login::slot_cookieAdded); //°ó¶¨CookieÌí¼ÓÊÂ¼ş
+    connect(login_webView,SIGNAL(loadFinished(bool)),this,SLOT(login_loadfinish(bool))); //ç»‘å®šç½‘é¡µåŠ è½½å®Œæˆäº‹ä»¶
+    connect(login_webView->page()->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded,this,&login::slot_cookieAdded); //ç»‘å®šCookieæ·»åŠ äº‹ä»¶
 
-    login_webView->load(OA_login_url); //¼ÓÔØOAµÇÂ¼½çÃæ
+    login_webView->load(OA_login_url); //åŠ è½½OAç™»å½•ç•Œé¢
 
-    /*ÔÚframe¿Ø¼şÉÏÏÔÊ¾ÍøÒ³*/
+    /*åœ¨frameæ§ä»¶ä¸Šæ˜¾ç¤ºç½‘é¡µ*/
     QStackedLayout* layout = new QStackedLayout(ui->frame);
     ui->frame->setLayout(layout);
     layout->addWidget(login_webView);
 }
 
-/*´¦ÀíµÇÂ¼Ò³ÃæµÄCookieĞÅÏ¢*/
+/*å¤„ç†ç™»å½•é¡µé¢çš„Cookieä¿¡æ¯*/
 void login::slot_cookieAdded(const QNetworkCookie &cookie)
 {
     login_Cookie.append(cookie.name()).append(" ").append(cookie.value()).append(" ");
-    //qDebug()<<"Cookie Added-->"<<cookie.domain()<<cookie.name()<<cookie.value()<<endl; //´òÓ¡CookieÄÚµÄËùÊôÓòÃû¡¢ÊôĞÔÃû¡¢ÊôĞÔÖµ
+    //qDebug()<<"Cookie Added-->"<<cookie.domain()<<cookie.name()<<cookie.value()<<endl; //æ‰“å°Cookieå†…çš„æ‰€å±åŸŸåã€å±æ€§åã€å±æ€§å€¼
 
     if(login_Cookie.contains("CASTGC",Qt::CaseSensitive))
     {
@@ -51,12 +51,12 @@ void login::slot_cookieAdded(const QNetworkCookie &cookie)
         ui->progressBar->show();
         ui->frame->hide();
 
-        /*¼ÓÔØFTPÎÄ¼şÄ¿Â¼Â·¾¶txt*/
+        /*åŠ è½½FTPæ–‡ä»¶ç›®å½•è·¯å¾„txt*/
         if(ui->frame->isHidden())
         {
-            if(!(file.fileName()==tr("%1/List_all_url.txt").arg(QCoreApplication::applicationDirPath()))) //ÊÇ·ñÒÑ¾­¼ÓÔØ
+            if(!(file.fileName()==tr("%1/List_all_url.txt").arg(QCoreApplication::applicationDirPath()))) //æ˜¯å¦å·²ç»åŠ è½½
             {
-                file.setFileName(tr("%1/List_all_url.txt").arg(QCoreApplication::applicationDirPath())); //exeÄ¿Â¼ÏÂ
+                file.setFileName(tr("%1/List_all_url.txt").arg(QCoreApplication::applicationDirPath())); //exeç›®å½•ä¸‹
                 out.setDevice(&file);
 
                 if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -66,7 +66,7 @@ void login::slot_cookieAdded(const QNetworkCookie &cookie)
     }
 }
 
-/*´ıµÇÂ¼Ò³Ãæ¼ÓÔØÍê±Ïºó½øĞĞÒ³ÃæÏÔÊ¾¡¢Cookie½âÎö¡¢µÇÂ¼È·ÈÏ*/
+/*å¾…ç™»å½•é¡µé¢åŠ è½½å®Œæ¯•åè¿›è¡Œé¡µé¢æ˜¾ç¤ºã€Cookieè§£æã€ç™»å½•ç¡®è®¤*/
 void login::login_loadfinish(bool)
 {
     ui->label->hide();
@@ -74,9 +74,9 @@ void login::login_loadfinish(bool)
 
     //qDebug()<<"Cookie:"<<login_Cookie;
 
-    /*´ÓCookieÖĞ½âÎöCASTGCÁîÅÆ*/
+    /*ä»Cookieä¸­è§£æCASTGCä»¤ç‰Œ*/
     if(login_Cookie.contains("CASTGC",Qt::CaseSensitive))
-        accept(); //µÇÂ¼È·ÈÏ£¬ÊÍ·Å
+        accept(); //ç™»å½•ç¡®è®¤ï¼Œé‡Šæ”¾
 }
 
 void login::closeEvent(QCloseEvent *event)
